@@ -35,12 +35,28 @@ while (true)
 
     Console.Write("Category name (optional): ");
     filter.CategoryName = Console.ReadLine();
+    string wSort;
+    do
+    {
+        Console.Write("do you want to sort?");
+        wSort = Console.ReadLine();
+        switch (wSort.ToLower())
+        {
+            case "y":
+                var sortBy = new ProductSortDto();
+                Console.Write("Sort by (price / name / stock): ");
+                sortBy.SortBy = Console.ReadLine().ToLower();
+                Console.Write("Descending? (y/n): ");
+                sortBy.IsDescending = Console.ReadLine()?.ToLower() == "y";
+                filter.Sort.Add(sortBy);
+                break;
+            case "n":
+                break;
+        }
 
-    Console.Write("Sort by (price / name / stock): ");
-    filter.SortBy = Console.ReadLine();
-
-    Console.Write("Descending? (y/n): ");
-    filter.IsDescending = Console.ReadLine()?.ToLower() == "y";
+    } while (wSort=="y");
+  
+    
 
     filter.PageSize = 3; // 3 products per page
 

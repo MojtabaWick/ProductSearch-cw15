@@ -2,6 +2,7 @@
 using cw15.Entities;
 using cw15.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace cw15.Infrastructure.DataAccess.Repositories
 {
@@ -34,13 +35,35 @@ namespace cw15.Infrastructure.DataAccess.Repositories
             if (!string.IsNullOrEmpty(filter.CategoryName))
                 query = query.Where(p => p.Category != null && p.Category.Name.Contains(filter.CategoryName));
 
-            query = filter.SortBy?.ToLower() switch
+            if (filter.Sort.Count > 0)
             {
-                "price" => filter.IsDescending ? query.OrderByDescending(p => p.Price) : query.OrderBy(p => p.Price),
-                "name" => filter.IsDescending ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name),
-                "stock" => filter.IsDescending ? query.OrderByDescending(p => p.Stock) : query.OrderBy(p => p.Stock),
-                _ => query
-            };
+                IOrderedQueryable<Product> orderedQuery = null;
+
+                for (int i = 0; i < filter.Sort.Count; i++)
+                {
+                    if (i == 0)
+                    {
+                        query = filter.Sort[i].SortBy.ToLower() switch
+                        {
+                            "price" => filter.Sort[i].IsDescending ? query.OrderByDescending(p => p.Price) : query.OrderBy(p => p.Price),
+                            "name" => filter.Sort[i].IsDescending ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name),
+                            "stock" => filter.Sort[i].IsDescending ? query.OrderByDescending(p => p.Stock) : query.OrderBy(p => p.Stock),
+                            
+                        };
+                    }
+                    else
+                    {
+
+                         query = filter.Sort[i].SortBy.ToLower() switch
+                        {
+                            "price" => filter.Sort[i].IsDescending ? query.ThenByDescending(p => p.Price) : query.ThenBy(p => p.Price),
+                            "name" => filter.Sort[i].IsDescending ? query.ThenByDescending(p => p.Name) : query.ThenBy(p => p.Name),
+                            "stock" => filter.Sort[i].IsDescending ? query.ThenByDescending(p => p.Stock) : query.ThenBy(p => p.Stock),
+
+                        };
+                    }
+                }
+            }
 
             return query.ToList();
         }
