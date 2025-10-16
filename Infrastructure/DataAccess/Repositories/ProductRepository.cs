@@ -35,34 +35,39 @@ namespace cw15.Infrastructure.DataAccess.Repositories
             if (!string.IsNullOrEmpty(filter.CategoryName))
                 query = query.Where(p => p.Category != null && p.Category.Name.Contains(filter.CategoryName));
 
-            if (filter.Sort.Count > 0)
+            if (filter.Sort != null && filter.Sort.Count > 0)
             {
                 IOrderedQueryable<Product> orderedQuery = null;
 
                 for (int i = 0; i < filter.Sort.Count; i++)
                 {
+                    var sortItem = filter.Sort[i];
+
+                    // --- first sort ---
                     if (i == 0)
                     {
-                        query = filter.Sort[i].SortBy.ToLower() switch
+                        orderedQuery = sortItem.SortBy.ToLower() switch
                         {
-                            "price" => filter.Sort[i].IsDescending ? query.OrderByDescending(p => p.Price) : query.OrderBy(p => p.Price),
-                            "name" => filter.Sort[i].IsDescending ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name),
-                            "stock" => filter.Sort[i].IsDescending ? query.OrderByDescending(p => p.Stock) : query.OrderBy(p => p.Stock),
-                            
+                            "price" => sortItem.IsDescending ? query.OrderByDescending(p => p.Price) : query.OrderBy(p => p.Price),
+                            "name" => sortItem.IsDescending ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name),
+                            "stock" => sortItem.IsDescending ? query.OrderByDescending(p => p.Stock) : query.OrderBy(p => p.Stock),
+                            _ => query.OrderBy(p => p.Id) // default fallback
                         };
                     }
-                    else
+                    else // --- additional ThenBy ---
                     {
-
-                         query = filter.Sort[i].SortBy.ToLower() switch
+                        orderedQuery = sortItem.SortBy.ToLower() switch
                         {
-                            "price" => filter.Sort[i].IsDescending ? query.ThenByDescending(p => p.Price) : query.ThenBy(p => p.Price),
-                            "name" => filter.Sort[i].IsDescending ? query.ThenByDescending(p => p.Name) : query.ThenBy(p => p.Name),
-                            "stock" => filter.Sort[i].IsDescending ? query.ThenByDescending(p => p.Stock) : query.ThenBy(p => p.Stock),
-
+                            "price" => sortItem.IsDescending ? orderedQuery.ThenByDescending(p => p.Price) : orderedQuery.ThenBy(p => p.Price),
+                            "name" => sortItem.IsDescending ? orderedQuery.ThenByDescending(p => p.Name) : orderedQuery.ThenBy(p => p.Name),
+                            "stock" => sortItem.IsDescending ? orderedQuery.ThenByDescending(p => p.Stock) : orderedQuery.ThenBy(p => p.Stock),
+                            _ => orderedQuery
                         };
                     }
                 }
+
+                // replace query with orderedQuery
+                query = orderedQuery;
             }
 
             return query.ToList();
