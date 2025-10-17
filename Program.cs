@@ -4,7 +4,6 @@ using cw15.Services;
 using cw15.Tools;
 
 using var db = new AppDbContext();
-
 var _service = new ProductService();
 
 while (true)
@@ -35,54 +34,47 @@ while (true)
 
     Console.Write("Category name (optional): ");
     filter.CategoryName = Console.ReadLine();
+
+    // Sorting
     string wSort;
     do
     {
-        Console.Write("do you want to sort?");
-        wSort = Console.ReadLine();
-        switch (wSort.ToLower())
+        Console.Write("Do you want to sort? (y/n): ");
+        wSort = Console.ReadLine()?.ToLower();
+
+        if (wSort == "y")
         {
-            case "y":
-                var sortBy = new ProductSortDto();
-                Console.Write("Sort by (price / name / stock): ");
-                sortBy.SortBy = Console.ReadLine().ToLower();
-                Console.Write("Descending? (y/n): ");
-                sortBy.IsDescending = Console.ReadLine()?.ToLower() == "y";
-                filter.Sort.Add(sortBy);
-                break;
-            case "n":
-                break;
+            var sortBy = new ProductSortDto();
+            Console.Write("Sort by (price / name / stock): ");
+            sortBy.SortBy = Console.ReadLine()?.ToLower();
+            Console.Write("Descending? (y/n): ");
+            sortBy.IsDescending = Console.ReadLine()?.ToLower() == "y";
+            filter.Sort.Add(sortBy);
         }
 
-    } while (wSort=="y");
-  
-    
+    } while (wSort == "y");
 
-    filter.PageSize = 3; // 3 products per page
-
-    // Run search
-    var results = _service.SearchProduct(filter);
-
-    // Paging
+    filter.PageSize = 3;
     int currentPage = 1;
+
     while (true)
     {
+        filter.PageNumber = currentPage;
+
+        var (results, totalCount) = _service.SearchProduct(filter);
+
         Console.Clear();
-        Console.WriteLine($"📄 Page {currentPage}\n");
+        Console.WriteLine($"Page {currentPage} of {Math.Ceiling((double)totalCount / filter.PageSize)}\n");
 
-        var page = results.Skip((currentPage - 1) * filter.PageSize).Take(filter.PageSize)
-            .ToList();
-
-        if (page.Count == 0)
-            Console.WriteLine("❌ No products found.");
+        if (results.Count == 0)
+            Console.WriteLine("No products found.");
         else
-            ConsolePainter.WriteTable(page);
-
+            ConsolePainter.WriteTable(results);
 
         Console.WriteLine("\n[n] next | [p] previous | [r] new search | [q] quit");
         var key = Console.ReadKey(true).KeyChar;
 
-        if (key == 'n' && currentPage * filter.PageSize < results.Count)
+        if (key == 'n' && currentPage * filter.PageSize < totalCount)
             currentPage++;
         else if (key == 'p' && currentPage > 1)
             currentPage--;

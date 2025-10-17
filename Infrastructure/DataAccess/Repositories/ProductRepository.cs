@@ -10,7 +10,7 @@ namespace cw15.Infrastructure.DataAccess.Repositories
     {
         private readonly AppDbContext _context = new AppDbContext();
 
-        public List<Product> SearchProduct(ProductSearchDto filter)
+        public (List<Product> Items, int TotalCount) SearchProduct(ProductSearchDto filter)
         {
             var query = _context.Products.Include(p => p.Category).AsQueryable();
 
@@ -35,28 +35,26 @@ namespace cw15.Infrastructure.DataAccess.Repositories
             if (!string.IsNullOrEmpty(filter.CategoryName))
                 query = query.Where(p => p.Category != null && p.Category.Name.Contains(filter.CategoryName));
 
+            // --- Sorting ---
             if (filter.Sort != null && filter.Sort.Count > 0)
             {
-                IOrderedQueryable<Product> orderedQuery = null;
-
+                IOrderedQueryable<Product>? orderedQuery = null;
                 for (int i = 0; i < filter.Sort.Count; i++)
                 {
                     var sortItem = filter.Sort[i];
-
-                    // --- first sort ---
                     if (i == 0)
                     {
-                        orderedQuery = sortItem.SortBy.ToLower() switch
+                        orderedQuery = sortItem.SortBy switch
                         {
                             "price" => sortItem.IsDescending ? query.OrderByDescending(p => p.Price) : query.OrderBy(p => p.Price),
                             "name" => sortItem.IsDescending ? query.OrderByDescending(p => p.Name) : query.OrderBy(p => p.Name),
                             "stock" => sortItem.IsDescending ? query.OrderByDescending(p => p.Stock) : query.OrderBy(p => p.Stock),
-                            _ => query.OrderBy(p => p.Id) // default fallback
+                            _ => query.OrderBy(p => p.Id)
                         };
                     }
-                    else // --- additional ThenBy ---
+                    else
                     {
-                        orderedQuery = sortItem.SortBy.ToLower() switch
+                        orderedQuery = sortItem.SortBy switch
                         {
                             "price" => sortItem.IsDescending ? orderedQuery.ThenByDescending(p => p.Price) : orderedQuery.ThenBy(p => p.Price),
                             "name" => sortItem.IsDescending ? orderedQuery.ThenByDescending(p => p.Name) : orderedQuery.ThenBy(p => p.Name),
@@ -66,12 +64,20 @@ namespace cw15.Infrastructure.DataAccess.Repositories
                     }
                 }
 
-                // replace query with orderedQuery
-                query = orderedQuery;
+                query = orderedQuery!;
             }
 
-            return query.ToList();
+            var totalCount = query.Count();
+
+            var items = query
+                .Skip((filter.PageNumber - 1) * filter.PageSize)
+                .Take(filter.PageSize)
+                .ToList();
+
+            return (items, totalCount);
         }
+
+
     }
 
 }

@@ -7,8 +7,8 @@ namespace cw15.Services
     public class ProductService
     {
         ProductRepository _repo = new ProductRepository();
-        public List<Product> SearchProduct(ProductSearchDto filter)
-        {
+        public (List<Product> Items, int TotalCount) SearchProduct(ProductSearchDto filter)
+        {  
             return _repo.SearchProduct(filter);
         }
     }
